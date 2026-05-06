@@ -1,0 +1,58 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 08d7c54e3..9cb3a73b0 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -50,6 +50,13 @@ endif()
+ # Disable exception handling.
+ add_compile_options(-fno-exceptions)
+ 
++# Workaround for macOS 10.13 SDK: <cmath> fails because C99 math functions
++# (isfinite, isinf, isnan, signbit, etc.) are only macros, not global-namespace
++# functions. Force-include a shim that provides them as inline functions.
++if(APPLE)
++  add_compile_options(-include ${CMAKE_CURRENT_SOURCE_DIR}/src/fix_cmath_darwin.h)
++endif()
++
+ # Undefine NDEBUG to keep assert() in release builds.
+ add_definitions(-UNDEBUG)
+ 
+diff --git a/cmake/Tests.cmake b/cmake/Tests.cmake
+index ed745b4ce..79f557624 100644
+--- a/cmake/Tests.cmake
++++ b/cmake/Tests.cmake
+@@ -41,14 +41,9 @@ add_custom_target(fish_run_tests
+   USES_TERMINAL
+ )
+ 
+-# If CMP0037 is available, also make an alias "test" target.
+-# Note that this policy may not be available, in which case definining such a target silently fails.
+-cmake_policy(PUSH)
+-if(POLICY CMP0037)
+-  cmake_policy(SET CMP0037 OLD)
+-  add_custom_target(test DEPENDS fish_run_tests)
+-endif()
+-cmake_policy(POP)
++# The "test" target name is reserved when CTest is enabled (CMake >= 3.0).
++# CMake 4.x no longer allows setting CMP0037 to OLD behavior.
++# Users should use the "fish_run_tests" target instead of "make test".
+ 
+ # Build the low-level tests code
+ add_executable(fish_tests EXCLUDE_FROM_ALL
+@@ -79,7 +74,7 @@ set(TEST_ROOT_DIR ${TEST_DIR}/root)
+ # Copy needed directories for out-of-tree builds
+ if(NOT FISH_IN_TREE_BUILD)
+   add_custom_target(funcs_dir)
+-  add_custom_command(TARGET funcs_dir
++  add_custom_command(TARGET funcs_dir POST_BUILD
+     COMMAND mkdir -p ${CMAKE_BINARY_DIR}/share
+     # Don't run ln twice or it will create a new link in the link.
+     COMMAND test -e ${CMAKE_BINARY_DIR}/share/functions || ln -sf
+@@ -88,7 +83,7 @@ if(NOT FISH_IN_TREE_BUILD)
+                        VERBATIM)
+ 
+   add_custom_target(tests_dir DEPENDS tests)
+-  add_custom_command(TARGET tests_dir
++  add_custom_command(TARGET tests_dir POST_BUILD
+                        COMMAND ${CMAKE_COMMAND} -E copy_directory
+                        ${CMAKE_SOURCE_DIR}/tests/ ${CMAKE_BINARY_DIR}/tests/
+                        COMMENT "Copying test files to binary dir"

@@ -1,0 +1,18 @@
+# Object files
+*.o
+
+# Static libraries
+*.a
+
+# Compiled binaries
+codex_backport/codex
+
+# Compiled framework dylib + symlink
+codex_backport/ScreenCaptureKit.framework/Versions/A/ScreenCaptureKit
+codex_backport/ScreenCaptureKit.framework/ScreenCaptureKit
+
+# Framework backup
+codex_backport/ScreenCaptureKit.framework_backup/
+
+# Output binaries
+out/
