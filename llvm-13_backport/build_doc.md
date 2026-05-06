@@ -1,5 +1,7 @@
 # LLVM 13 Backport Build on macOS 10.13 (High Sierra)
 
+> **⚠️ 注意**：本文档由 AI 生成，大致编译方法正确，但具体路径、版本号等细节仅供参考，实际执行时需根据自身环境调整。
+
 ## 环境
 
 | 项目 | 值 |
@@ -77,6 +79,8 @@ macOS 10.13 系统头文件 `<mach/machine.h>` 不包含 `CPU_SUBTYPE_ARM64E`（
 
 ```bash
 # 添加 #include <mach/machine.h> 和兼容性定义
+
+> **⚠️ 注意**：本文档由 AI 生成，大致编译方法正确，但具体路径、版本号等细节仅供参考，实际执行时需根据自身环境调整。
 sed -i '' '/^#include <cstdlib>$/i\
 #include <mach/machine.h>
 ' lldb/source/Host/macosx/objcxx/HostInfoMacOSX.mm
@@ -148,10 +152,16 @@ cmake -G Ninja \
 cd ./llvm/build-llvm13
 
 # 编译 LLVM 核心（约 10000 个目标）
+
+> **⚠️ 注意**：本文档由 AI 生成，大致编译方法正确，但具体路径、版本号等细节仅供参考，实际执行时需根据自身环境调整。
 ninja -j4
 
 # iOS sanitizer 运行时动态库会链接失败（需要 iOS SDK），
+
+> **⚠️ 注意**：本文档由 AI 生成，大致编译方法正确，但具体路径、版本号等细节仅供参考，实际执行时需根据自身环境调整。
 # 但核心工具不受影响，可以用 -k0 跳过
+
+> **⚠️ 注意**：本文档由 AI 生成，大致编译方法正确，但具体路径、版本号等细节仅供参考，实际执行时需根据自身环境调整。
 ninja -k0 -j4
 ```
 

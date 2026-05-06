@@ -1,5 +1,7 @@
 # Node.js 24 Backport for macOS 10.13 + Xcode 10 / LLVM 15
 
+> **⚠️ 注意**：本文档由 AI 生成，大致编译方法正确，但具体路径、版本号等细节仅供参考，实际执行时需根据自身环境调整。
+
 ## Problem
 Node.js 24 (v24.15.0) requires macOS 13.5+ SDK and full C++20 support. This backport enables building on macOS 10.13 (High Sierra) with Xcode 10's SDK and LLVM 15 as the compiler.
 
@@ -46,10 +48,16 @@ Automated build script that applies patches and builds with LLVM 15.
 ```bash
 # 1. Place LLVM 15 at ~/llvm/clang+llvm-15.0.7-x86_64-apple-darwin21.0
 
+> **⚠️ 注意**：本文档由 AI 生成，大致编译方法正确，但具体路径、版本号等细节仅供参考，实际执行时需根据自身环境调整。
+
 # 2. Run the build script:
+
+> **⚠️ 注意**：本文档由 AI 生成，大致编译方法正确，但具体路径、版本号等细节仅供参考，实际执行时需根据自身环境调整。
 ~/node_backport/build.sh ./node
 
 # Or manually:
+
+> **⚠️ 注意**：本文档由 AI 生成，大致编译方法正确，但具体路径、版本号等细节仅供参考，实际执行时需根据自身环境调整。
 cd ./node
 git apply ~/node_backport/0002-all-source-fixes.patch
 export LLVM=~/llvm/clang+llvm-15.0.7-x86_64-apple-darwin21.0

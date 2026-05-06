@@ -1,5 +1,7 @@
 # fish-shell backport for macOS 10.13 + CMake 4.x
 
+> **⚠️ 注意**：本文档由 AI 生成，大致编译方法正确，但具体路径、版本号等细节仅供参考，实际执行时需根据自身环境调整。
+
 ## 环境
 
 - **fish-shell**: 3.7.1 (git tag 3.7.1)

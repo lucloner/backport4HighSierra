@@ -1,5 +1,7 @@
 # pg_search macOS 10.13 Backport Build Guide
 
+> **⚠️ 注意**：本文档由 AI 生成，大致编译方法正确，但具体路径、版本号等细节仅供参考，实际执行时需根据自身环境调整。
+
 ## Overview
 
 This document describes the process of compiling pg_search v0.22.6 (ParadeDB) for PostgreSQL 17 on macOS 10.13.6 (High Sierra) with Xcode 10.1 (Apple Clang 10.0.0).
@@ -39,20 +41,28 @@ _FreeExecutorState, _pfree, _ReadNextFullTransactionId, ...
 
 ```bash
 # Toolchain — put Rust 1.90.0 cargo/rustc first in PATH
+
+> **⚠️ 注意**：本文档由 AI 生成，大致编译方法正确，但具体路径、版本号等细节仅供参考，实际执行时需根据自身环境调整。
 export PATH="$HOME/.rustup/toolchains/1.90.0-x86_64-apple-darwin/bin:$PATH"
 export RUSTUP_TOOLCHAIN=1.90.0
 export MACOSX_DEPLOYMENT_TARGET=10.13
 
 # C/C++ compiler — LLVM 15 for aws-lc-sys AVX512 asm
+
+> **⚠️ 注意**：本文档由 AI 生成，大致编译方法正确，但具体路径、版本号等细节仅供参考，实际执行时需根据自身环境调整。
 export CC=~/llvm/clang+llvm-15.0.7-x86_64-apple-darwin21.0/bin/clang
 export CXX=~/llvm/clang+llvm-15.0.7-x86_64-apple-darwin21.0/bin/clang++
 export CFLAGS="-fuse-ld=lld"
 export CXXFLAGS="-fuse-ld=lld"
 
 # Rust linker flags — dynamic_lookup for PG extension symbols
+
+> **⚠️ 注意**：本文档由 AI 生成，大致编译方法正确，但具体路径、版本号等细节仅供参考，实际执行时需根据自身环境调整。
 export RUSTFLAGS="-C link-arg=-undefined -C link-arg=dynamic_lookup"
 
 # PostgreSQL
+
+> **⚠️ 注意**：本文档由 AI 生成，大致编译方法正确，但具体路径、版本号等细节仅供参考，实际执行时需根据自身环境调整。
 export PG_CONFIG=/Applications/Postgres.app/Contents/Versions/17/bin/pg_config
 ```
 

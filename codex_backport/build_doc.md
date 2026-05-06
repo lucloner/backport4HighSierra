@@ -1,5 +1,7 @@
 # Codex macOS 10.13 Backport Build Guide
 
+> **⚠️ 注意**：本文档由 AI 生成，大致编译方法正确，但具体路径、版本号等细节仅供参考，实际执行时需根据自身环境调整。
+
 ## Overview
 
 This document describes the process of compiling the Codex CLI (codex-cli) for macOS 10.13 (High Sierra) on a machine running macOS 10.13.6 with Xcode 10.1 (Apple Clang 10.0.0).
