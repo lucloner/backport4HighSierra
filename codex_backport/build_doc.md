@@ -1,10 +1,17 @@
-# Codex macOS 10.13 Backport Build Guide
-
-> **⚠️ 注意**：本文档由 AI 生成，大致编译方法正确，但具体路径、版本号等细节仅供参考，实际执行时需根据自身环境调整。
+# Codex macOS 10.13 Backport Build Guide (LLVM 13)
 
 ## Overview
 
-This document describes the process of compiling the Codex CLI (codex-cli) for macOS 10.13 (High Sierra) on a machine running macOS 10.13.6 with Xcode 10.1 (Apple Clang 10.0.0).
+This document describes the process of compiling the Codex CLI (codex-cli) v0.131.0-alpha.4 for macOS 10.13 (High Sierra) on a machine running macOS 10.13.6 with Xcode 10.1 (Apple Clang 10.0.0), using **LLVM 13** as the compiler toolchain.
+
+## Key Differences from Previous Build (LLVM 15)
+
+- **Compiler**: Locally-built LLVM 13 (`~/llvm/build-llvm13/`) instead of prebuilt LLVM 15
+- **libc++ headers**: Must add `-isystem` flag pointing to the prebuilt LLVM 13's bundled libc++ headers (`~/llvm/clang+llvm-13.0.1-x86_64-apple-darwin/include/c++/v1`) because the locally-built LLVM 13 does not include them
+- **Linker**: Using `lld` from the locally-built LLVM 13 (the system linker `ld64-409.12` does not support `-platform_version`)
+- **Dependency changes**: `webrtc-sys` renamed to `libwebrtc` in the new version; same stubs still work
+- **Version**: codex-cli 0.131.0-alpha.4 (upgraded from 0.120.0)
+- **cxx.h patches**: NOT needed with LLVM 13's libc++ (no `std::ranges::contiguous_range` static_assert issue)
 
 ## Root Cause
 
@@ -12,52 +19,51 @@ The codex-cli binary depends on several crates that require modern compiler/link
 
 1. **aws-lc-sys 0.39.0**: Requires AVX512 assembly support (not in Apple Clang 10.0.0)
 2. **v8 146.4.0**: Requires a C11 function `aligned_alloc` (not on macOS 10.13)
-3. **webrtc-sys**: Prebuilt binary uses ScreenCaptureKit (macOS 12.3+) and other newer APIs
-4. **cxx 1.0.194**: Uses `std::ranges::contiguous_range` static_assert incompatible with LLVM 15 libc++
+3. **libwebrtc 0.3.26**: Prebuilt binary uses ScreenCaptureKit (macOS 12.3+) and other newer APIs
+4. **cxx 1.0.194**: Uses `std::ranges::contiguous_range` static_assert (not an issue with LLVM 13's libc++)
 
 ## Prerequisites
 
-- macOS 10.13.6 with Xcode 10.1
+- macOS 10.13.6 with Xcode 10.1 (Apple Clang 10.0.0)
 - Rust toolchain 1.93.0 (via rustup)
-- LLVM 15.0.7 (prebuilt binary for x86_64-apple-darwin21.0)
-- HTTP proxy at `http://PROXY_HOST:PORT` for GitHub access
+- Locally-built LLVM 13 (`~/llvm/build-llvm13/`) with clang, clang++, and lld
+- Prebuilt LLVM 13 binary (`~/llvm/clang+llvm-13.0.1-x86_64-apple-darwin/`) for libc++ headers
+- HTTP proxy at `http://192.168.4.251:61087` for internet access
 - Pre-downloaded `librusty_v8_release_x86_64-apple-darwin.a.gz`
 
 ## Environment Setup
 
 ```bash
+export PATH=~/.cargo/bin:$PATH
 export RUSTUP_TOOLCHAIN=1.93.0
 export MACOSX_DEPLOYMENT_TARGET=10.13
-export CC=~/llvm/clang+llvm-15.0.7-x86_64-apple-darwin21.0/bin/clang
-export CXX=~/llvm/clang+llvm-15.0.7-x86_64-apple-darwin21.0/bin/clang++
-export CFLAGS="-fuse-ld=lld -F./codex_backport"
-export CXXFLAGS="-fuse-ld=lld -F./codex_backport"
-export HTTPS_PROXY=http://PROXY_HOST:PORT
-export HTTP_PROXY=http://PROXY_HOST:PORT
-export RUSTY_V8_ARCHIVE=~/librusty_v8_release_x86_64-apple-darwin.a.gz
-export RUSTFLAGS="-L ./codex_backport -C link-arg=-L./codex_backport -C link-arg=-F./codex_backport -C link-arg=-weak_framework -C link-arg=ScreenCaptureKit -C link-arg=-lmacos_compat"
+export CC=/Users/lucloner/llvm/build-llvm13/bin/clang
+export CXX=/Users/lucloner/llvm/build-llvm13/bin/clang++
+export CFLAGS="-fuse-ld=lld -F/Users/lucloner/src/backport/codex_backport -isystem /Users/lucloner/llvm/clang+llvm-13.0.1-x86_64-apple-darwin/include/c++/v1"
+export CXXFLAGS="-fuse-ld=lld -F/Users/lucloner/src/backport/codex_backport -isystem /Users/lucloner/llvm/clang+llvm-13.0.1-x86_64-apple-darwin/include/c++/v1"
+export HTTPS_PROXY=http://192.168.4.251:61087
+export HTTP_PROXY=http://192.168.4.251:61087
+export ALL_PROXY=http://192.168.4.251:61087
+export http_proxy=http://192.168.4.251:61087
+export https_proxy=http://192.168.4.251:61087
+export all_proxy=http://192.168.4.251:61087
+export RUSTY_V8_ARCHIVE=/Users/lucloner/librusty_v8_release_x86_64-apple-darwin.a.gz
+export RUSTFLAGS="-L /Users/lucloner/src/backport/codex_backport -C link-arg=-L/Users/lucloner/src/backport/codex_backport -C link-arg=-F/Users/lucloner/src/backport/codex_backport -C link-arg=-weak_framework -C link-arg=ScreenCaptureKit -C link-arg=-lmacos_compat"
 ```
+
+**Important**: Use absolute paths (not `~`) in all environment variables, as `cc-rs` does not expand `~`.
 
 ## Patches Applied
 
-### 1. LLVM 15 Clang for CC/CXX
+### 1. LLVM 13 Clang for CC/CXX
 
-Apple Clang 10.0.0 cannot compile AVX512 assembly in aws-lc-sys. Using LLVM 15 Clang solves this.
+Apple Clang 10.0.0 cannot compile AVX512 assembly in aws-lc-sys. Using locally-built LLVM 13 Clang solves this.
 
-The system linker (ld64-409.12) does not support `-platform_version`, so we use `-fuse-ld=lld` to use LLVM 15 LLD instead.
+The system linker (ld64-409.12) does not support `-platform_version`, so we use `-fuse-ld=lld` to use LLVM 13 LLD instead.
 
-### 2. cxx.h Patch: Remove static_assert and Add element_type
+### 2. libc++ Headers from Prebuilt LLVM 13
 
-**Files patched:**
-- `~/.cargo/registry/src/.../cxx-1.0.194/include/cxx.h`
-- `~/.cargo/registry/src/.../cxx-build-1.0.194/src/gen/include/cxx.h`
-- All `cxx.h` in `target/release/build/scratch-*/out/livekit_webrtc/*/mac-x64-release/include/third_party/rust/`
-- All `cxx.h` in `target/release/build/webrtc-sys-*/out/cxxbridge/include/rust/`
-
-**Changes:**
-- Commented out `static_assert(std::ranges::contiguous_range<rust::Slice<const uint8_t>>)`
-- Commented out `static_assert(std::contiguous_iterator<rust::Slice<const uint8_t>::iterator>)`
-- Added `using element_type = T;` to `Slice<T>::iterator` class (needed for `std::pointer_traits` in LLVM 15 libc++)
+The locally-built LLVM 13 does not include libc++ headers. We add `-isystem /Users/lucloner/llvm/clang+llvm-13.0.1-x86_64-apple-darwin/include/c++/v1` to CFLAGS/CXXFLAGS to provide the C++ standard library headers.
 
 ### 3. V8 Archive
 
@@ -75,7 +81,7 @@ The V8 crate downloads a ~32MB binary from GitHub which fails through the proxy.
 - `__isPlatformVersionAtLeast` (compiler builtin from newer SDK)
 - `kVTCompressionPropertyKey_PrioritizeEncodingSpeedOverQuality`
 - `kVTCompressionPropertyKey_MaxAllowedFrameQP`
-- `kVTVideoEncoderSpecification_EnableLowLatencyRateControl`
+- `kVTCompressionPropertyKey_EnableLowLatencyRateControl`
 - `SCStreamFrameInfoStatus/ContentRect/BoundingRect/ScaleFactor/DirtyRects/PresenterOverlayContentRect/ContentScale`
 
 **`stubs_extra.m`** - Additional ObjC stubs:
@@ -86,32 +92,51 @@ The V8 crate downloads a ~32MB binary from GitHub which fails through the proxy.
 
 A minimal `.framework` bundle at `./codex_backport/ScreenCaptureKit.framework/` containing the compiled stubs as a dylib. This satisfies the `-weak_framework ScreenCaptureKit` linker flag.
 
-### 6. webrtc-sys Build Output Patch
+### 6. Cargo Configuration
 
-Removed `cargo:rustc-link-lib=framework=ScreenCaptureKit` from `target/release/build/webrtc-sys-*/output` (it was re-added later for weak linking via RUSTFLAGS).
+Configure `~/.cargo/config.toml` to use HTTP proxy and sparse registry for better download performance:
+
+```toml
+[http]
+proxy = "192.168.4.251:61087"
+
+[net]
+retry = 5
+git-fetch-with-cli = true
+
+[registry]
+default = "crates-io"
+
+[registry.crates-io]
+protocol = "sparse"
+```
+
+Also configure git proxy:
+```bash
+git config --global http.proxy http://192.168.4.251:61087
+git config --global https.proxy http://192.168.4.251:61087
+```
 
 ## Build Result
 
-- Binary: `./codex/codex-rs/target/release/codex` (155MB)
-- Version: `codex-cli 0.120.0`
+- Binary: `/Users/lucloner/src/codex/codex-rs/target/release/codex` (194MB)
+- Version: `codex-cli 0.131.0-alpha.4`
 - Target: `Mach-O 64-bit executable x86_64`
 - macOS deployment target: `10.13`
 - SDK: `10.14`
-- ScreenCaptureKit linked as weak framework via `@executable_path`
+- ScreenCaptureKit linked as weak framework via `@rpath`
 
 ## Files in ./codex_backport/
 
 | File | Description |
 |---|---|
-| `codex` | Final binary |
-| `build_final.sh` | Build script |
+| `codex` | Final binary (0.131.0-alpha.4) |
+| `build_final.sh` | Build script (LLVM 13 version) |
 | `stubs.m` | ObjC class stubs |
-| `stubs.c` | C stubs (old) |
 | `stubs2.c` | C/CFString stubs |
 | `stubs_extra.m` | Additional ObjC stubs |
-| `libmacos_compat.a` | Static library of all stubs |
+| `libmacos_compat.a` | Static library of all stubs (compiled with LLVM 13) |
 | `ScreenCaptureKit.framework/` | Stub framework bundle |
-| `screen_capture_kit_stub.m` | Early version of SCK stubs |
 
 ## Runtime Note
 
@@ -121,4 +146,4 @@ The stub `__isPlatformVersionAtLeast` always returns 0, so runtime version check
 
 ## Build Time
 
-LTO fat linking (`-C lto=fat -C codegen-units=1`) takes ~45 minutes on this hardware (16GB RAM, Xeon E5).
+Total build time with LLVM 13: ~147 minutes on this hardware (16GB RAM, Xeon E5), primarily due to LTO and the webrtc/libwebrtc dependency.
