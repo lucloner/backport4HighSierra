@@ -1,0 +1,125 @@
+diff --git a/src/crypto/x509/internal/macos/security.go b/src/crypto/x509/internal/macos/security.go
+index 6af19bafe5..18c7fd8461 100644
+--- a/src/crypto/x509/internal/macos/security.go
++++ b/src/crypto/x509/internal/macos/security.go
+@@ -19,11 +19,24 @@ import (
+ //go:cgo_ldflag "Security"
+ 
+ // Based on https://opensource.apple.com/source/Security/Security-59306.41.2/base/Security.h
++//
++// Backport note: SecTrustEvaluateWithError and SecTrustCopyCertificateChain are
++// macOS 10.14+ APIs and not available on 10.13. We use SecTrustEvaluate (10.3+)
++// and SecTrustGetCertificateCount/SecTrustGetCertificateAtIndex (10.6+) instead.
+ 
+ const (
+-	// various macOS error codes that can be returned from
+-	// SecTrustEvaluateWithError that we can map to Go cert
+-	// verification error types.
++	// SecTrustResultType values
++	SecTrustResultInvalid               = 0
++	SecTrustResultProceed               = 1
++	SecTrustResultConfirm               = 2
++	SecTrustResultDeny                  = 3
++	SecTrustResultUnspecified           = 4 // cert chain valid, no special processing
++	SecTrustResultRecoverableTrustFailure = 5
++	SecTrustResultFatalTrustFailure     = 6
++	SecTrustResultOtherError            = 7
++
++	// Various macOS error codes that can be returned from
++	// SecTrustEvaluate that we can map to Go cert verification error types.
+ 	ErrSecCertificateExpired = -67818
+ 	ErrSecHostNameMismatch   = -67602
+ 	ErrSecNotTrusted         = -67843
+@@ -93,35 +106,21 @@ func SecTrustSetVerifyDate(trustObj CFRef, dateRef CFRef) error {
+ }
+ func x509_SecTrustSetVerifyDate_trampoline()
+ 
++// SecTrustEvaluate evaluates a trust object. Available on macOS 10.3+.
++// Returns a SecTrustResultType value.
++//
+ //go:cgo_import_dynamic x509_SecTrustEvaluate SecTrustEvaluate "/System/Library/Frameworks/Security.framework/Versions/A/Security"
+ 
+-func SecTrustEvaluate(trustObj CFRef) (CFRef, error) {
+-	var result CFRef
++func SecTrustEvaluate(trustObj CFRef) (uint32, error) {
++	var result uint32
+ 	ret := syscall(abi.FuncPCABI0(x509_SecTrustEvaluate_trampoline), uintptr(trustObj), uintptr(unsafe.Pointer(&result)), 0, 0, 0, 0)
+ 	if int32(ret) != 0 {
+ 		return 0, OSStatus{"SecTrustEvaluate", int32(ret)}
+ 	}
+-	return CFRef(result), nil
++	return result, nil
+ }
+ func x509_SecTrustEvaluate_trampoline()
+ 
+-//go:cgo_import_dynamic x509_SecTrustEvaluateWithError SecTrustEvaluateWithError "/System/Library/Frameworks/Security.framework/Versions/A/Security"
+-
+-func SecTrustEvaluateWithError(trustObj CFRef) (int, error) {
+-	var errRef CFRef
+-	ret := syscall(abi.FuncPCABI0(x509_SecTrustEvaluateWithError_trampoline), uintptr(trustObj), uintptr(unsafe.Pointer(&errRef)), 0, 0, 0, 0)
+-	if int32(ret) != 1 {
+-		errStr := CFErrorCopyDescription(errRef)
+-		err := errors.New(CFStringToString(errStr))
+-		errCode := CFErrorGetCode(errRef)
+-		CFRelease(errRef)
+-		CFRelease(errStr)
+-		return errCode, err
+-	}
+-	return 0, nil
+-}
+-func x509_SecTrustEvaluateWithError_trampoline()
+-
+ //go:cgo_import_dynamic x509_SecCertificateCopyData SecCertificateCopyData "/System/Library/Frameworks/Security.framework/Versions/A/Security"
+ 
+ func SecCertificateCopyData(cert CFRef) ([]byte, error) {
+@@ -135,13 +134,24 @@ func SecCertificateCopyData(cert CFRef) ([]byte, error) {
+ }
+ func x509_SecCertificateCopyData_trampoline()
+ 
+-//go:cgo_import_dynamic x509_SecTrustCopyCertificateChain SecTrustCopyCertificateChain "/System/Library/Frameworks/Security.framework/Versions/A/Security"
++// SecTrustGetCertificateCount returns the number of certificates in a trust evaluation.
++// Available on macOS 10.6+.
++//
++//go:cgo_import_dynamic x509_SecTrustGetCertificateCount SecTrustGetCertificateCount "/System/Library/Frameworks/Security.framework/Versions/A/Security"
+ 
+-func SecTrustCopyCertificateChain(trustObj CFRef) (CFRef, error) {
+-	ret := syscall(abi.FuncPCABI0(x509_SecTrustCopyCertificateChain_trampoline), uintptr(trustObj), 0, 0, 0, 0, 0)
+-	if ret == 0 {
+-		return 0, OSStatus{"SecTrustCopyCertificateChain", int32(ret)}
+-	}
+-	return CFRef(ret), nil
++func SecTrustGetCertificateCount(trustObj CFRef) int {
++	ret := syscall(abi.FuncPCABI0(x509_SecTrustGetCertificateCount_trampoline), uintptr(trustObj), 0, 0, 0, 0, 0)
++	return int(ret)
++}
++func x509_SecTrustGetCertificateCount_trampoline()
++
++// SecTrustGetCertificateAtIndex returns a certificate at a given index from a trust evaluation.
++// Available on macOS 10.6+.
++//
++//go:cgo_import_dynamic x509_SecTrustGetCertificateAtIndex SecTrustGetCertificateAtIndex "/System/Library/Frameworks/Security.framework/Versions/A/Security"
++
++func SecTrustGetCertificateAtIndex(trustObj CFRef, index int) CFRef {
++	ret := syscall(abi.FuncPCABI0(x509_SecTrustGetCertificateAtIndex_trampoline), uintptr(trustObj), uintptr(index), 0, 0, 0, 0)
++	return CFRef(ret)
+ }
+-func x509_SecTrustCopyCertificateChain_trampoline()
++func x509_SecTrustGetCertificateAtIndex_trampoline()
+diff --git a/src/crypto/x509/internal/macos/security.s b/src/crypto/x509/internal/macos/security.s
+index ca5337c788..4c302b4325 100644
+--- a/src/crypto/x509/internal/macos/security.s
++++ b/src/crypto/x509/internal/macos/security.s
+@@ -19,9 +19,9 @@ TEXT ·x509_SecTrustSetVerifyDate_trampoline(SB),NOSPLIT,$0-0
+ 	JMP x509_SecTrustSetVerifyDate(SB)
+ TEXT ·x509_SecTrustEvaluate_trampoline(SB),NOSPLIT,$0-0
+ 	JMP x509_SecTrustEvaluate(SB)
+-TEXT ·x509_SecTrustEvaluateWithError_trampoline(SB),NOSPLIT,$0-0
+-	JMP x509_SecTrustEvaluateWithError(SB)
+ TEXT ·x509_SecCertificateCopyData_trampoline(SB),NOSPLIT,$0-0
+ 	JMP x509_SecCertificateCopyData(SB)
+-TEXT ·x509_SecTrustCopyCertificateChain_trampoline(SB),NOSPLIT,$0-0
+-	JMP x509_SecTrustCopyCertificateChain(SB)
++TEXT ·x509_SecTrustGetCertificateCount_trampoline(SB),NOSPLIT,$0-0
++	JMP x509_SecTrustGetCertificateCount(SB)
++TEXT ·x509_SecTrustGetCertificateAtIndex_trampoline(SB),NOSPLIT,$0-0
++	JMP x509_SecTrustGetCertificateAtIndex(SB)

@@ -1,18 +1,15 @@
-# Object files
-*.o
-
-# Static libraries
-*.a
-
-# Compiled binaries
+# Binaries
 codex_backport/codex
-
-# Compiled framework dylib + symlink
-codex_backport/ScreenCaptureKit.framework/Versions/A/ScreenCaptureKit
-codex_backport/ScreenCaptureKit.framework/ScreenCaptureKit
-
-# Framework backup
-codex_backport/ScreenCaptureKit.framework_backup/
-
-# Output binaries
+go_backport/go
 out/
+*.tgz
+
+# Compiled objects
+*.o
+*.a
+*.so
+*.dylib
+*.framework/Versions/Current/ScreenCaptureKit
+
+# macOS
+.DS_Store

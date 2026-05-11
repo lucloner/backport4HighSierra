@@ -1,0 +1,66 @@
+diff --git a/src/crypto/x509/root_darwin.go b/src/crypto/x509/root_darwin.go
+index 3e9aa1ba09..4856aec98e 100644
+--- a/src/crypto/x509/root_darwin.go
++++ b/src/crypto/x509/root_darwin.go
+@@ -54,32 +54,38 @@ func (c *Certificate) systemVerify(opts *VerifyOptions) (chains [][]*Certificate
+ 		}
+ 	}
+ 
+-	// TODO(roland): we may want to allow passing in SCTs via VerifyOptions and
+-	// set them via SecTrustSetSignedCertificateTimestamps, since Apple will
+-	// always enforce its SCT requirements, and there are still _some_ people
+-	// using TLS or OCSP for that.
+-
+-	if ret, err := macos.SecTrustEvaluateWithError(trustObj); err != nil {
+-		switch ret {
+-		case macos.ErrSecCertificateExpired:
+-			return nil, CertificateInvalidError{c, Expired, err.Error()}
+-		case macos.ErrSecHostNameMismatch:
+-			return nil, HostnameError{c, opts.DNSName}
+-		case macos.ErrSecNotTrusted:
+-			return nil, UnknownAuthorityError{Cert: c}
+-		default:
+-			return nil, fmt.Errorf("x509: %s", err)
+-		}
++	// Use SecTrustEvaluate (available since macOS 10.3) instead of
++	// SecTrustEvaluateWithError (macOS 10.14+) for 10.13 backport.
++	result, err := macos.SecTrustEvaluate(trustObj)
++	if err != nil {
++		return nil, fmt.Errorf("x509: SecTrustEvaluate failed: %v", err)
+ 	}
+ 
+-	chain := [][]*Certificate{{}}
+-	chainRef, err := macos.SecTrustCopyCertificateChain(trustObj)
+-	if err != nil {
+-		return nil, err
++	switch result {
++	case macos.SecTrustResultUnspecified, macos.SecTrustResultProceed:
++		// Cert chain is valid
++	case macos.SecTrustResultRecoverableTrustFailure:
++		// Trust failure - map to appropriate error
++		// We can't get the specific error code from SecTrustEvaluate like
++		// we can from SecTrustEvaluateWithError, so return a generic error
++		return nil, UnknownAuthorityError{Cert: c}
++	case macos.SecTrustResultDeny:
++		return nil, UnknownAuthorityError{Cert: c}
++	case macos.SecTrustResultFatalTrustFailure:
++		return nil, UnknownAuthorityError{Cert: c}
++	case macos.SecTrustResultOtherError:
++		return nil, UnknownAuthorityError{Cert: c}
++	default:
++		return nil, fmt.Errorf("x509: SecTrustEvaluate returned unexpected result %d", result)
+ 	}
+-	defer macos.CFRelease(chainRef)
+-	for i := 0; i < macos.CFArrayGetCount(chainRef); i++ {
+-		certRef := macos.CFArrayGetValueAtIndex(chainRef, i)
++
++	// Use SecTrustGetCertificateCount/SecTrustGetCertificateAtIndex
++	// (available since macOS 10.6) instead of SecTrustCopyCertificateChain
++	// (macOS 10.14+) for 10.13 backport.
++	chain := [][]*Certificate{{}}
++	count := macos.SecTrustGetCertificateCount(trustObj)
++	for i := 0; i < count; i++ {
++		certRef := macos.SecTrustGetCertificateAtIndex(trustObj, i)
+ 		cert, err := exportCertificate(certRef)
+ 		if err != nil {
+ 			return nil, err
