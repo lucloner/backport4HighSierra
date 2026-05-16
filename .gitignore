@@ -25,5 +25,6 @@ go_backport/go
 # Logs (may contain user paths/host info)
 *.log
 
-# Version stub generated files (auto-created by build.sh)
+# Version stub generated files in artifacts/ (auto-created by build.sh)
 version_stub_*
+!dotnet8_backport/version_stub_*

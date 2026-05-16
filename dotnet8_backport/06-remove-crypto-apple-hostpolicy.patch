@@ -1,0 +1,25 @@
+diff --git a/src/native/corehost/hostpolicy/hostpolicy_context.cpp b/src/native/corehost/hostpolicy/hostpolicy_context.cpp
+index 1ceb961f8..731c0a4da 100644
+--- a/src/native/corehost/hostpolicy/hostpolicy_context.cpp
++++ b/src/native/corehost/hostpolicy/hostpolicy_context.cpp
+@@ -51,7 +51,6 @@ namespace
+     extern "C" const void* SecurityResolveDllImport(const char* name);
+     extern "C" const void* SystemResolveDllImport(const char* name);
+     extern "C" const void* CryptoResolveDllImport(const char* name);
+-    extern "C" const void* CryptoAppleResolveDllImport(const char* name);
+ 
+     // pinvoke_override:
+     // Check if given function belongs to one of statically linked libraries and return a pointer if found.
+@@ -95,12 +94,6 @@ namespace
+             }
+         }
+ 
+-#if defined(TARGET_OSX)
+-        if (strcmp(library_name, LIB_NAME("System.Security.Cryptography.Native.Apple")) == 0)
+-        {
+-            return CryptoAppleResolveDllImport(entry_point_name);
+-        }
+-#endif
+ 
+         return nullptr;
+     }
