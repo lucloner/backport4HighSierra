@@ -131,22 +131,22 @@ export CXXFLAGS="-fuse-ld=lld -isystem /path/to/clang+llvm-13.0.1/include/c++/v1
 
 ## 产出文件 (`out/`)
 
-| 文件 | 说明 |
-|------|------|
-| `out/codex/codex` | Codex CLI 0.131.0-alpha.4 二进制 |
-| `out/codex.tgz` | 压缩包 |
-| `out/fish-shell/` | fish-shell 3.7.1 二进制 |
-| `out/fish-shell.tgz` | 压缩包 |
-| `out/node/` | Node.js v22.22.2 二进制 |
-| `out/node.tgz` | 压缩包 |
-| `out/llvm-13/` | LLVM 13.0.1 工具链 |
-| `out/llvm-13.tgz` | 压缩包 |
-| `out/go/` | Go 1.26.3 二进制 |
-| `out/go.tgz` | 压缩包 |
-| `out/paradedb/` | ParadeDB pg_search 0.22.6 |
-| `out/paradedb.tgz` | 压缩包 |
-| `out/dylibs/` | .NET 8 动态链接库 (15 个，含 libcoreclr) |
-| `out/bin/` | .NET 8 可执行文件 (ilasm, ildasm, corerun 等) |
-| `out/static-libs/` | .NET 8 静态库 (含 libcoreclr_static.a 460M) |
-| `out/native-libs/` | .NET 8 平台原生库 (7 个) |
-| `out/debug/` | .NET 8 DWARF 调试符号 |
+| 目录 | 项目 | 大小 | 说明 |
+|------|------|------|------|
+| `out/codex/` | Codex CLI | 194M | 0.131.0-alpha.4 二进制 |
+| `out/fish-shell/` | fish-shell | 7.7M | 3.7.1 二进制 (fish, fish_indent, fish_key_reader) |
+| `out/node/` | Node.js | 123M | v22.22.2 二进制 |
+| `out/go/` | Go | 15M | 1.26.3 二进制 |
+| `out/dotnet8/` | .NET 8 | 994M | 原生组件 (详见下方) |
+| `out/llvm-13/` | LLVM 13 | — | 需通过 MacPorts 安装 |
+| `out/paradedb/` | ParadeDB | — | 需通过 Cargo + LLVM 15 编译 |
+
+### `out/dotnet8/` 详解
+
+| 子目录 | 大小 | 内容 |
+|--------|------|------|
+| `dylibs/` | 35M | 15 个动态链接库 (libcoreclr 7.0M, libclrjit 3.1M 等) |
+| `bin/` | 6.2M | 6 个可执行文件 (ilasm, ildasm, superpmi, mcs, corerun, createdump) |
+| `static-libs/` | 642M | 12 个静态库 (libcoreclr_static.a 460M 等) |
+| `native-libs/` | 4.9M | 7 个平台原生库 |
+| `debug/` | 306M | DWARF 调试符号 |
