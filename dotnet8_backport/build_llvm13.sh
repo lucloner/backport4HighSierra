@@ -71,7 +71,7 @@ make -j$NCPUS 2>&1 | tee build.log
 
 # Step 5: Copy outputs
 echo "[5/5] Collecting outputs..."
-OUTDIR="$(dirname "$0")/../out/dotnet8_llvm13"
+OUTDIR="$(dirname "$0")/../out/dotnet8-llvm13"
 mkdir -p "$OUTDIR/dylibs" "$OUTDIR/bin" "$OUTDIR/static-libs" "$OUTDIR/native-libs" "$OUTDIR/debug"
 find "$BUILDDIR" -name "*.dylib" -exec cp {} "$OUTDIR/dylibs/" \;
 find "$BUILDDIR" -maxdepth 4 -type f -perm +111 | while read f; do

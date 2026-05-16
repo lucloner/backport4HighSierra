@@ -152,7 +152,7 @@ export CXXFLAGS="-fuse-ld=lld -isystem /path/to/clang+llvm-13.0.1/include/c++/v1
 | `out/node/` | Node.js | 123M | v22.22.2 二进制 |
 | `out/go/` | Go | 15M | 1.26.3 二进制 |
 | `out/dotnet8/` | .NET 8 (Apple Clang) | 994M | 原生组件 (详见下方) |
-| `out/dotnet8_llvm13/` | .NET 8 (LLVM 13) | 880M | 原生组件 (详见下方) |
+| `out/dotnet8-llvm13/` | .NET 8 (LLVM 13) | 880M | 原生组件 (详见下方) |
 | `out/llvm-13/` | LLVM 13 | — | 需通过 MacPorts 安装 |
 | `out/paradedb/` | ParadeDB | — | 需通过 Cargo + LLVM 15 编译 |
 
@@ -166,7 +166,7 @@ export CXXFLAGS="-fuse-ld=lld -isystem /path/to/clang+llvm-13.0.1/include/c++/v1
 | `native-libs/` | 4.9M | 7 个平台原生库 |
 | `debug/` | 306M | DWARF 调试符号 |
 
-### `out/dotnet8_llvm13/` 详解 (LLVM 13)
+### `out/dotnet8-llvm13/` 详解 (LLVM 13)
 
 | 子目录 | 大小 | 内容 |
 |--------|------|------|
