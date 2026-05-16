@@ -1,0 +1,100 @@
+diff --git a/Directory.Build.props b/Directory.Build.props
+index 3c8246c89..d03a2394c 100644
+--- a/Directory.Build.props
++++ b/Directory.Build.props
+@@ -64,7 +64,7 @@
+     <tvOSVersionMin>11.0</tvOSVersionMin>
+     <watchOSVersionMin>2.0</watchOSVersionMin>
+     <watchOS64_32VersionMin>5.1</watchOS64_32VersionMin>
+-    <macOSVersionMin>10.15</macOSVersionMin>
++    <macOSVersionMin>10.13</macOSVersionMin>
+     <macOSVersionMin Condition="('$(TargetOS)' == 'osx' or '$(TargetOS)' == 'maccatalyst') and '$(TargetArchitecture)' == 'arm64'">11.0</macOSVersionMin>
+   </PropertyGroup>
+ 
+diff --git a/eng/native/configurecompiler.cmake b/eng/native/configurecompiler.cmake
+index 5da65d586..68e070030 100644
+--- a/eng/native/configurecompiler.cmake
++++ b/eng/native/configurecompiler.cmake
+@@ -684,7 +684,7 @@ if (CLR_CMAKE_HOST_UNIX)
+       set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0")
+       add_compile_options(-arch arm64)
+     elseif(CLR_CMAKE_HOST_ARCH_AMD64)
+-      set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15")
++      set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13")
+       add_compile_options(-arch x86_64)
+     else()
+       clr_unknown_arch()
+diff --git a/global.json b/global.json
+index 8493e87c9..b7837ba6c 100644
+--- a/global.json
++++ b/global.json
+@@ -1,11 +1,11 @@
+ {
+   "sdk": {
+-    "version": "8.0.126",
++    "version": "6.0.428",
+     "allowPrerelease": true,
+-    "rollForward": "major"
++    "rollForward": "latestFeature"
+   },
+   "tools": {
+-    "dotnet": "8.0.126"
++    "dotnet": "6.0.428"
+   },
+   "msbuild-sdks": {
+     "Microsoft.DotNet.Arcade.Sdk": "8.0.0-beta.26224.3",
+diff --git a/src/native/corehost/hostmisc/utils.cpp b/src/native/corehost/hostmisc/utils.cpp
+index 0a77fb7b6..5c9432c78 100644
+--- a/src/native/corehost/hostmisc/utils.cpp
++++ b/src/native/corehost/hostmisc/utils.cpp
+@@ -485,7 +485,7 @@ pal::string_t get_host_version_description()
+ 
+     // sccsid is @(#)Version <file_version> [@Commit: <commit_hash>]
+     // Get the commit portion if available
+-    char* commit_maybe = ::strchr(&sccsid[STRING_LENGTH("@(#)Version ")], '@');
++    const char* commit_maybe = ::strchr(&sccsid[STRING_LENGTH("@(#)Version ")], '@');
+     if (commit_maybe != nullptr)
+     {
+         info.append(" ");
+diff --git a/src/native/libs/CMakeLists.txt b/src/native/libs/CMakeLists.txt
+index 67f285864..d1e4fa5f6 100644
+--- a/src/native/libs/CMakeLists.txt
++++ b/src/native/libs/CMakeLists.txt
+@@ -167,7 +167,4 @@ if (CLR_CMAKE_TARGET_UNIX OR CLR_CMAKE_TARGET_BROWSER OR CLR_CMAKE_TARGET_WASI)
+         add_subdirectory(System.Security.Cryptography.Native)
+     endif ()
+ 
+-    if (CLR_CMAKE_TARGET_APPLE)
+-        add_subdirectory(System.Security.Cryptography.Native.Apple)
+-    endif ()
+ endif ()
+diff --git a/src/native/libs/System.Security.Cryptography.Native.Apple/CMakeLists.txt b/src/native/libs/System.Security.Cryptography.Native.Apple/CMakeLists.txt
+index 46b52d84c..190efd070 100644
+--- a/src/native/libs/System.Security.Cryptography.Native.Apple/CMakeLists.txt
++++ b/src/native/libs/System.Security.Cryptography.Native.Apple/CMakeLists.txt
+@@ -56,7 +56,7 @@ endif()
+ 
+ add_custom_command(
+     OUTPUT pal_swiftbindings.o
+-    COMMAND xcrun swiftc -emit-object -static -parse-as-library -runtime-compatibility-version none ${SWIFT_SDK_FLAG} -target ${SWIFT_COMPILER_TARGET} ${CMAKE_CURRENT_SOURCE_DIR}/pal_swiftbindings.swift -o pal_swiftbindings.o
++    COMMAND xcrun swiftc -emit-object -parse-as-library ${SWIFT_SDK_FLAG} -target ${SWIFT_COMPILER_TARGET} ${CMAKE_CURRENT_SOURCE_DIR}/pal_swiftbindings.swift -o pal_swiftbindings.o
+     MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/pal_swiftbindings.swift
+     COMMENT "Compiling Swift file pal_swiftbindings.swift"
+ )
+diff --git a/src/native/libs/System.Security.Cryptography.Native.Apple/extra_libs.cmake b/src/native/libs/System.Security.Cryptography.Native.Apple/extra_libs.cmake
+index 07b595bd6..759f7f1ba 100644
+--- a/src/native/libs/System.Security.Cryptography.Native.Apple/extra_libs.cmake
++++ b/src/native/libs/System.Security.Cryptography.Native.Apple/extra_libs.cmake
+@@ -8,6 +8,11 @@ macro(append_extra_cryptography_apple_libs NativeLibsExtra)
+     if (CLR_CMAKE_TARGET_OSX)
+         find_library(CRYPTOKIT_LIBRARY CryptoKit)
+ 
+-        list(APPEND ${NativeLibsExtra} ${CRYPTOKIT_LIBRARY} -L/usr/lib/swift -lobjc -lswiftCore -lswiftFoundation)
++        if(CRYPTOKIT_LIBRARY)
++            list(APPEND ${NativeLibsExtra} ${CRYPTOKIT_LIBRARY} -L/usr/lib/swift -lobjc -lswiftCore -lswiftFoundation)
++        else()
++            # CryptoKit not available on macOS < 10.15
++            list(APPEND ${NativeLibsExtra} -lobjc)
++        endif()
+     endif()
+ endmacro()

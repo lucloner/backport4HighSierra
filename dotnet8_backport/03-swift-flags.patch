@@ -1,0 +1,24 @@
+From: Backport <backport@local>
+Subject: [PATCH] Remove unsupported Swift flags for Swift 4.x compatibility
+
+Swift 4.2.1 (Xcode 10.1) does not support -static or 
+-runtime-compatibility-version flags. Remove them to allow
+compilation on older Xcode versions.
+
+---
+ .../System.Security.Cryptography.Native.Apple/CMakeLists.txt     | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/native/libs/System.Security.Cryptography.Native.Apple/CMakeLists.txt b/src/native/libs/System.Security.Cryptography.Native.Apple/CMakeLists.txt
+index 46b52d84c..190efd070 100644
+--- a/src/native/libs/System.Security.Cryptography.Native.Apple/CMakeLists.txt
++++ b/src/native/libs/System.Security.Cryptography.Native.Apple/CMakeLists.txt
+@@ -56,7 +56,7 @@ endif()
+ 
+ add_custom_command(
+     OUTPUT pal_swiftbindings.o
+-    COMMAND xcrun swiftc -emit-object -static -parse-as-library -runtime-compatibility-version none ${SWIFT_SDK_FLAG} -target ${SWIFT_COMPILER_TARGET} ${CMAKE_CURRENT_SOURCE_DIR}/pal_swiftbindings.swift -o pal_swiftbindings.o
++    COMMAND xcrun swiftc -emit-object -parse-as-library ${SWIFT_SDK_FLAG} -target ${SWIFT_COMPILER_TARGET} ${CMAKE_CURRENT_SOURCE_DIR}/pal_swiftbindings.swift -o pal_swiftbindings.o
+     MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/pal_swiftbindings.swift
+     COMMENT "Compiling Swift file pal_swiftbindings.swift"
+ )

@@ -1,0 +1,23 @@
+From: Backport <backport@local>
+Subject: [PATCH] Fix const correctness in utils.cpp for older compilers
+
+Older Clang versions (AppleClang 10.0) require const char* from strchr
+in C++ mode, not char*.
+
+---
+ src/native/corehost/hostmisc/utils.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/native/corehost/hostmisc/utils.cpp b/src/native/corehost/hostmisc/utils.cpp
+index 0a77fb7b6..5c9432c78 100644
+--- a/src/native/corehost/hostmisc/utils.cpp
++++ b/src/native/corehost/hostmisc/utils.cpp
+@@ -485,7 +485,7 @@ pal::string_t get_host_version_description()
+ 
+     // sccsid is @(#)Version <file_version> [@Commit: <commit_hash>]
+     // Get the commit portion if available
+-    char* commit_maybe = ::strchr(&sccsid[STRING_LENGTH("@(#)Version ")], '@');
++    const char* commit_maybe = ::strchr(&sccsid[STRING_LENGTH("@(#)Version ")], '@');
+     if (commit_maybe != nullptr)
+     {
+         info.append(" ");

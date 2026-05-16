@@ -1,0 +1,36 @@
+From: Backport <backport@local>
+Subject: [PATCH] Lower macOS deployment target from 10.15 to 10.13
+
+Allow building on macOS 10.13 High Sierra (x86_64).
+
+---
+ Directory.Build.props                | 2 +-
+ eng/native/configurecompiler.cmake   | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/Directory.Build.props b/Directory.Build.props
+index 3c8246c89..d03a2394c 100644
+--- a/Directory.Build.props
++++ b/Directory.Build.props
+@@ -64,7 +64,7 @@
+     <tvOSVersionMin>11.0</tvOSVersionMin>
+     <watchOSVersionMin>2.0</watchOSVersionMin>
+     <watchOS64_32VersionMin>5.1</watchOS64_32VersionMin>
+-    <macOSVersionMin>10.15</macOSVersionMin>
++    <macOSVersionMin>10.13</macOSVersionMin>
+     <macOSVersionMin Condition="('$(TargetOS)' == 'osx' or '$(TargetOS)' == 'maccatalyst') and '$(TargetArchitecture)' == 'arm64'">11.0</macOSVersionMin>
+   </PropertyGroup>
+ 
+diff --git a/eng/native/configurecompiler.cmake b/eng/native/configurecompiler.cmake
+index 5da65d586..68e070030 100644
+--- a/eng/native/configurecompiler.cmake
++++ b/eng/native/configurecompiler.cmake
+@@ -684,7 +684,7 @@ if (CLR_CMAKE_HOST_UNIX)
+       set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0")
+       add_compile_options(-arch arm64)
+     elseif(CLR_CMAKE_HOST_ARCH_AMD64)
+-      set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15")
++      set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13")
+       add_compile_options(-arch x86_64)
+     else()
+       clr_unknown_arch()

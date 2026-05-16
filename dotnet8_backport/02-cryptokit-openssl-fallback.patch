@@ -1,0 +1,42 @@
+From: Backport <backport@local>
+Subject: [PATCH] Replace CryptoKit with OpenSSL fallback for macOS < 10.15
+
+CryptoKit framework is only available on macOS 10.15+.
+On older macOS, fall back to the OpenSSL-based cryptography native library.
+Also make CryptoKit linking optional in extra_libs.cmake.
+
+---
+ src/native/libs/CMakeLists.txt                                      | 3 ---
+ src/native/libs/System.Security.Cryptography.Native.Apple/extra_libs.cmake | 7 ++++++-
+ 2 files changed, 6 insertions(+), 3 deletions(-)
+
+diff --git a/src/native/libs/CMakeLists.txt b/src/native/libs/CMakeLists.txt
+index 67f285864..d1e4fa5f6 100644
+--- a/src/native/libs/CMakeLists.txt
++++ b/src/native/libs/CMakeLists.txt
+@@ -167,7 +167,4 @@ if (CLR_CMAKE_TARGET_UNIX OR CLR_CMAKE_TARGET_BROWSER OR CLR_CMAKE_TARGET_WASI)
+         add_subdirectory(System.Security.Cryptography.Native)
+     endif ()
+ 
+-    if (CLR_CMAKE_TARGET_APPLE)
+-        add_subdirectory(System.Security.Cryptography.Native.Apple)
+-    endif ()
+ endif ()
+ 
+diff --git a/src/native/libs/System.Security.Cryptography.Native.Apple/extra_libs.cmake b/src/native/libs/System.Security.Cryptography.Native.Apple/extra_libs.cmake
+index 07b595bd6..759f7f1ba 100644
+--- a/src/native/libs/System.Security.Cryptography.Native.Apple/extra_libs.cmake
++++ b/src/native/libs/System.Security.Cryptography.Native.Apple/extra_libs.cmake
+@@ -8,6 +8,11 @@ macro(append_extra_cryptography_apple_libs NativeLibsExtra)
+     if (CLR_CMAKE_TARGET_OSX)
+         find_library(CRYPTOKIT_LIBRARY CryptoKit)
+ 
+-        list(APPEND ${NativeLibsExtra} ${CRYPTOKIT_LIBRARY} -L/usr/lib/swift -lobjc -lswiftCore -lswiftFoundation)
++        if(CRYPTOKIT_LIBRARY)
++            list(APPEND ${NativeLibsExtra} ${CRYPTOKIT_LIBRARY} -L/usr/lib/swift -lobjc -lswiftCore -lswiftFoundation)
++        else()
++            # CryptoKit not available on macOS < 10.15
++            list(APPEND ${NativeLibsExtra} -lobjc)
++        endif()
+     endif()
+ endmacro()

@@ -1,15 +1,29 @@
-# Binaries
+# Build output (binaries)
+out/
+
+# Binary files
+*.dylib
+*.a
+*.o
+*.so
+*.dwarf
 codex_backport/codex
 go_backport/go
-out/
-*.tgz
 
-# Compiled objects
-*.o
-*.a
-*.so
-*.dylib
-*.framework/Versions/Current/ScreenCaptureKit
+# Frameworks & backups (contain binaries)
+*.framework/
+*_backup/
 
 # macOS
 .DS_Store
+
+# Archives
+*.tgz
+*.zip
+*.7z
+
+# Logs (may contain user paths/host info)
+*.log
+
+# Version stub generated files (auto-created by build.sh)
+version_stub_*
