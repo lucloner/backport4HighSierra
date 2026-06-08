@@ -1,0 +1,225 @@
+// -*- C++ -*-
+// Minimal C++23 <expected> header for Bun macOS 10.13 backport
+// Provides std::expected, std::unexpected, std::bad_expected_access
+// Compatible with LLVM 15's libc++ and WebKit's WTF::Expected
+
+#ifndef _LIBCPP_EXPECTED
+#define _LIBCPP_EXPECTED
+
+#include <initializer_list>
+#include <type_traits>
+#include <utility>
+#include <exception>
+#include <variant>
+#include <__config>
+
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
+
+_LIBCPP_BEGIN_NAMESPACE_STD
+
+// bad_expected_access
+template <class _Ep>
+class _LIBCPP_TEMPLATE_VIS bad_expected_access : public exception {
+public:
+  explicit bad_expected_access(_Ep __e) : __unex_(std::move(__e)) {}
+  _Ep& error() & noexcept { return __unex_; }
+  const _Ep& error() const& noexcept { return __unex_; }
+  _Ep&& error() && noexcept { return std::move(__unex_); }
+  const _Ep&& error() const&& noexcept { return std::move(__unex_); }
+  const char* what() const noexcept override { return "bad expected access"; }
+private:
+  _Ep __unex_;
+};
+
+template <>
+class _LIBCPP_TEMPLATE_VIS bad_expected_access<void> : public exception {
+public:
+  const char* what() const noexcept override { return "bad expected access"; }
+};
+
+// unexpect_t
+struct unexpect_t {
+  explicit unexpect_t() = default;
+};
+inline constexpr unexpect_t unexpect{};
+
+namespace __expected {
+
+template <class _Tp, class _Ep>
+class _LIBCPP_TEMPLATE_VIS __expected_storage {
+protected:
+  bool __has_val_;
+  union {
+    _Tp __val_;
+    _Ep __unex_;
+  };
+  
+  __expected_storage() : __has_val_(true), __val_() {}
+  
+  template <class... _Args>
+  constexpr explicit __expected_storage(in_place_t, _Args&&... __args)
+      : __has_val_(true), __val_(std::forward<_Args>(__args)...) {}
+  
+  template <class... _Args>
+  constexpr explicit __expected_storage(unexpect_t, _Args&&... __args)
+      : __has_val_(false), __unex_(std::forward<_Args>(__args)...) {}
+};
+
+} // namespace __expected
+
+// unexpected
+template <class _Ep>
+class _LIBCPP_TEMPLATE_VIS unexpected {
+public:
+  unexpected() = delete;
+  
+  constexpr explicit unexpected(const _Ep& __e) : __unex_(__e) {}
+  constexpr explicit unexpected(_Ep&& __e) : __unex_(std::move(__e)) {}
+  
+  template <class... _Args, enable_if_t<is_constructible_v<_Ep, _Args...>, int> = 0>
+  constexpr explicit unexpected(in_place_t, _Args&&... __args)
+      : __unex_(std::forward<_Args>(__args)...) {}
+  
+  constexpr _Ep& value() & noexcept { return __unex_; }
+  constexpr const _Ep& value() const& noexcept { return __unex_; }
+  constexpr _Ep&& value() && noexcept { return std::move(__unex_); }
+  constexpr const _Ep&& value() const&& noexcept { return std::move(__unex_); }
+  
+  void swap(unexpected& __other) noexcept(is_nothrow_swappable_v<_Ep>) {
+    using std::swap;
+    swap(__unex_, __other.__unex_);
+  }
+  
+private:
+  _Ep __unex_;
+};
+
+// expected
+template <class _Tp, class _Ep>
+class _LIBCPP_TEMPLATE_VIS expected {
+public:
+  using value_type = _Tp;
+  using error_type = _Ep;
+  using unexpected_type = unexpected<_Ep>;
+  
+  template <class _Up>
+  using rebind = expected<_Up, _Ep>;
+  
+  constexpr expected() noexcept(is_nothrow_default_constructible_v<_Tp>)
+      : __has_val_(true), __val_{} {}
+  
+  constexpr expected(const expected& __other) = default;
+  constexpr expected(expected&& __other) = default;
+  
+  template <class _Up = _Tp, enable_if_t<!is_same_v<remove_cvref_t<_Up>, expected>, int> = 0,
+            enable_if_t<!is_same_v<remove_cvref_t<_Up>, unexpected<_Ep>>, int> = 0,
+            enable_if_t<is_constructible_v<_Tp, _Up>, int> = 0>
+  constexpr expected(_Up&& __v) : __has_val_(true), __val_(std::forward<_Up>(__v)) {}
+  
+  template <class... _Args, enable_if_t<is_constructible_v<_Tp, _Args...>, int> = 0>
+  constexpr explicit expected(in_place_t, _Args&&... __args)
+      : __has_val_(true), __val_(std::forward<_Args>(__args)...) {}
+  
+  constexpr expected(unexpected<_Ep> const& __unex)
+      : __has_val_(false), __unex_(__unex.value()) {}
+  constexpr expected(unexpected<_Ep>&& __unex)
+      : __has_val_(false), __unex_(std::move(__unex.value())) {}
+  
+  template <class... _Args, enable_if_t<is_constructible_v<_Ep, _Args...>, int> = 0>
+  constexpr explicit expected(unexpect_t, _Args&&... __args)
+      : __has_val_(false), __unex_(std::forward<_Args>(__args)...) {}
+  
+  expected& operator=(const expected& __other) = default;
+  expected& operator=(expected&& __other) = default;
+  
+  constexpr bool has_value() const noexcept { return __has_val_; }
+  constexpr explicit operator bool() const noexcept { return __has_val_; }
+  
+  constexpr _Tp& operator*() & noexcept { return __val_; }
+  constexpr const _Tp& operator*() const& noexcept { return __val_; }
+  constexpr _Tp&& operator*() && noexcept { return std::move(__val_); }
+  constexpr const _Tp&& operator*() const&& noexcept { return std::move(__val_); }
+  
+  constexpr _Tp* operator->() noexcept { return &__val_; }
+  constexpr const _Tp* operator->() const noexcept { return &__val_; }
+  
+  constexpr _Tp& value() & {
+    if (!__has_val_) throw bad_expected_access<_Ep>(std::move(__unex_));
+    return __val_;
+  }
+  constexpr const _Tp& value() const& {
+    if (!__has_val_) throw bad_expected_access<_Ep>(__unex_);
+    return __val_;
+  }
+  constexpr _Tp&& value() && {
+    if (!__has_val_) throw bad_expected_access<_Ep>(std::move(__unex_));
+    return std::move(__val_);
+  }
+  constexpr const _Tp&& value() const&& {
+    if (!__has_val_) throw bad_expected_access<_Ep>(std::move(__unex_));
+    return std::move(__val_);
+  }
+  
+  constexpr _Ep& error() & noexcept { return __unex_; }
+  constexpr const _Ep& error() const& noexcept { return __unex_; }
+  constexpr _Ep&& error() && noexcept { return std::move(__unex_); }
+  constexpr const _Ep&& error() const&& noexcept { return std::move(__unex_); }
+  
+private:
+  bool __has_val_;
+  union {
+    _Tp __val_;
+    _Ep __unex_;
+  };
+};
+
+// expected<void, E> specialization
+template <class _Ep>
+class _LIBCPP_TEMPLATE_VIS expected<void, _Ep> {
+public:
+  using value_type = void;
+  using error_type = _Ep;
+  using unexpected_type = unexpected<_Ep>;
+  
+  constexpr expected() noexcept : __has_val_(true) {}
+  constexpr expected(const expected& __other) = default;
+  constexpr expected(expected&& __other) = default;
+  
+  constexpr expected(unexpected<_Ep> const& __unex)
+      : __has_val_(false), __unex_(__unex.value()) {}
+  constexpr expected(unexpected<_Ep>&& __unex)
+      : __has_val_(false), __unex_(std::move(__unex.value())) {}
+  
+  template <class... _Args, enable_if_t<is_constructible_v<_Ep, _Args...>, int> = 0>
+  constexpr explicit expected(unexpect_t, _Args&&... __args)
+      : __has_val_(false), __unex_(std::forward<_Args>(__args)...) {}
+  
+  expected& operator=(const expected& __other) = default;
+  expected& operator=(expected&& __other) = default;
+  
+  constexpr bool has_value() const noexcept { return __has_val_; }
+  constexpr explicit operator bool() const noexcept { return __has_val_; }
+  
+  constexpr void operator*() const noexcept {}
+  
+  constexpr _Ep& error() & noexcept { return __unex_; }
+  constexpr const _Ep& error() const& noexcept { return __unex_; }
+  constexpr _Ep&& error() && noexcept { return std::move(__unex_); }
+  constexpr const _Ep&& error() const&& noexcept { return std::move(__unex_); }
+  
+private:
+  bool __has_val_;
+  _Ep __unex_;
+};
+
+_LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_EXPECTED
+
+// Additional macOS 10.13 compatibility
+#ifndef _LIBCPP_MACH_VM_OFFSET_T
+#define _LIBCPP_MACH_VM_OFFSET_T
+typedef unsigned long long mach_vm_offset_t;
+#endif

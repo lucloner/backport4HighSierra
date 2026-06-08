@@ -10,6 +10,12 @@ out/
 codex_backport/codex
 go_backport/go
 
+# Compiled executables
+a.out
+bun_backport/bun-*
+duplicati/dotnet6-host/dotnet
+duplicati/stubs/dotnet_wrapper
+
 # Frameworks & backups (contain binaries)
 *.framework/
 *_backup/
@@ -21,9 +27,15 @@ go_backport/go
 *.tgz
 *.zip
 *.7z
+*.tar.xz
+*.tar.gz
 
 # Logs (may contain user paths/host info)
 *.log
+
+# Python cache
+__pycache__/
+*.pyc
 
 # Version stub generated files in artifacts/ (auto-created by build.sh)
 version_stub_*
